@@ -3,11 +3,23 @@
 import sys
 import prettytable
 import pprint
+import re
+
+RESPACE = re.compile(r'^(?P<before>\s*).*?(?P<after>\s*)$')
+
+def mkcol(columns, column):
+    match = RESPACE.match(column)
+    before = len(match.group('before'))
+    after = len(match.group('after'))
+    if before > after or before == after > 1:
+        columns.append(' ' * (before - 1) + column.strip() + ' ' * (after - 1))
+    else:
+        columns.append(column.strip())
 
 def main():
     columns = []
     for column in sys.stdin.next().split('|'):
-        columns.append(column.strip())
+        mkcol(columns, column)
 
     table = prettytable.PrettyTable(columns[1:-1])
     table.align = 'l'
@@ -16,7 +28,7 @@ def main():
     for i, line in enumerate(sys.stdin):
         columns = []
         for column in line.split('|'):
-            columns.append(column.strip())
+            mkcol(columns, column)
         try:
             table.add_row(columns[1:-1])
         except Exception, exc:
@@ -24,6 +36,12 @@ def main():
             return 1
 
     print table
+
+    # But you can't really use prettytable here, because for right-aligned
+    # fields, it will pad out the field *right* of the value, making it
+    # effectively centered. We need to know upfront how many space to add
+    # *left* of the value and that means we need to know the field width
+    # in advance.
 
 if __name__ == '__main__':
     sys.exit(main())
